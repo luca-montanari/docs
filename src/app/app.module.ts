@@ -6,16 +6,37 @@ import { connectFirestoreEmulator, getFirestore, provideFirestore, enableMultiTa
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { environment } from 'src/environments/environment';
+import { FirestoreComponent } from './firestore/firestore.component';
+
+let resolvePersistenceEnabled: (enabled: boolean) => void;
+
+export const persistenceEnabled = new Promise<boolean>(resolve => {
+  resolvePersistenceEnabled = resolve;
+});
 
 @NgModule({
     declarations: [
-        AppComponent
+        AppComponent,
+        FirestoreComponent
     ],
     imports: [
         BrowserModule,
-        AppRoutingModule,        
+        AppRoutingModule,
+        provideFirebaseApp(() => initializeApp(environment.firebase)),
+        provideFirestore(() => {
+            const firestore = getFirestore();
+            if (environment.useEmulators) {
+                connectFirestoreEmulator(firestore, 'localhost', 8080);
+            }
+            enableMultiTabIndexedDbPersistence(firestore).then(
+                () => resolvePersistenceEnabled(true),
+                () => resolvePersistenceEnabled(false)
+            );
+            return firestore;
+        }),
     ],
-    providers: [        
+    providers: [
     ],
     bootstrap: [
         AppComponent
